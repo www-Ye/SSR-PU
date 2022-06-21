@@ -18,7 +18,7 @@ The [DocRED](https://www.aclweb.org/anthology/P19-1074/) dataset can be download
 
 The [Re-DocRED](https://arxiv.org/abs/2205.12696) dataset can be downloaded following the instructions at [link](https://github.com/tonytan48/Re-DocRED).
 
-The [ChemDisGene](https://arxiv.org/abs/2204.06584) dataset be downloaded following the instructions at [link](https://github.com/chanzuckerberg/ChemDisGene).
+The [ChemDisGene](https://arxiv.org/abs/2204.06584) dataset can be downloaded following the instructions at [link](https://github.com/chanzuckerberg/ChemDisGene).
 ```
 SSR-PU
  |-- dataset
