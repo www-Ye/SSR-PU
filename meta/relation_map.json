@@ -1,0 +1,16 @@
+{
+	"chem_disease:marker/mechanism": 0,
+	"chem_disease:therapeutic": 1,
+	"chem_gene:increases^expression": 2,
+	"chem_gene:decreases^expression": 3,
+	"gene_disease:marker/mechanism": 4,
+	"chem_gene:increases^activity": 5,
+	"chem_gene:decreases^activity": 6,
+	"chem_gene:increases^metabolic_processing": 7,
+	"chem_gene:affects^binding": 8,
+	"chem_gene:increases^transport": 9,
+	"chem_gene:decreases^metabolic_processing": 10,
+	"chem_gene:affects^localization": 11,
+	"chem_gene:affects^expression": 12,
+	"gene_disease:therapeutic": 13
+}
