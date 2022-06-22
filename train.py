@@ -207,7 +207,6 @@ def main():
     model.to(0)
 
     print(args.m_tag, args.isrank)
-    test_score, test_output = evaluate(args, model, test_features, tag="test")
 
     if args.load_path == "":  # Training
         train(args, model, train_features, test_features)

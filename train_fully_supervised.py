@@ -220,10 +220,6 @@ def main():
     model.to(0)
 
     print(args.m_tag, args.isrank)
-    dev_score, dev_output = evaluate(args, model, dev_features, tag="dev")
-    print(dev_output)
-    test_score, test_output = evaluate(args, model, test_features, tag="test")
-    print(test_output)
 
     if args.load_path == "":  # Training
         train(args, model, train_features, dev_features, test_features)
