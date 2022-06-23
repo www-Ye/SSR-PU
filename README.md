@@ -1,5 +1,5 @@
 # SSR-PU
-Code for paper [A Unified Positive and Unlabeled Learning Framework for Document-Level
+Code for paper [A Unified Positive-Unlabeled Learning Framework for Document-Level
 Relation Extraction with Different Levels of Labeling].
 
 ## Requirements
