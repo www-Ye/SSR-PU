@@ -5,15 +5,10 @@ import unidecode
 import random
 import os
 
-entity_type = ['PER', 'LOC', 'ORG', 'TIME', 'NUM', 'MISC']
-et2id = {'PER': 0, 'LOC': 1, 'ORG': 2, 'TIME': 3, 'NUM': 4, 'MISC': 5}
 docred_rel2id = json.load(open('meta/rel2id.json', 'r'))
 ctd_rel2id = json.load(open('meta/relation_map.json', 'r'))
-cdr_rel2id = {'1:NR:2': 0, '1:CID:2': 1}
-gda_rel2id = {'1:NR:2': 0, '1:GDA:2': 1}
 ENTITY_PAIR_TYPE_SET = set(
     [("Chemical", "Disease"), ("Chemical", "Gene"), ("Gene", "Disease")])
-
 
 def chunks(l, n):
     res = []
