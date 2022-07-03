@@ -15,10 +15,10 @@ from prepro import read_docred
 from evaluation import official_evaluate, to_official
 
 
-def train(args, model, train_features, dev_features, test_features):
+def train(args, model, train_features, dev_features):
     def finetune(features, optimizer, num_epoch, num_steps):
         best_score = -1
-        best_dev_output, best_test_output = None, None
+        best_dev_output = None
         train_dataloader = DataLoader(features, batch_size=args.train_batch_size, shuffle=True, collate_fn=collate_fn, drop_last=True)
         train_iterator = range(int(num_epoch))
         total_steps = int(len(train_dataloader) * num_epoch // args.gradient_accumulation_steps)
@@ -53,20 +53,15 @@ def train(args, model, train_features, dev_features, test_features):
                 if (step + 1) == len(train_dataloader) - 1 or (args.evaluation_steps > 0 and num_steps % args.evaluation_steps == 0 and step % args.gradient_accumulation_steps == 0):
                     dev_score, dev_output = evaluate(args, model, dev_features, tag="dev")
                     print(dev_output)
-                    test_score, test_output = evaluate(args, model, test_features, tag="test")
-                    print(test_output)
 
                     print("loss:", loss.item(), "   step:", num_steps)
 
                     if dev_score > best_score:
                         best_score = dev_score
                         best_dev_output = dev_output
-                        best_test_output = test_output
-                        if args.save_path != "":
-                            torch.save(model.state_dict(), args.save_path)
+                        torch.save(model.state_dict(), args.save_path)
 
         print('best dev f1:', best_dev_output)
-        print('best test f1:', best_test_output)
         return num_steps
 
     new_layer = ["extractor", "bilinear"]
@@ -142,7 +137,7 @@ def main():
     parser.add_argument("--train_file", default="train_annotated.json", type=str)
     parser.add_argument("--dev_file", default="dev.json", type=str)
     parser.add_argument("--test_file", default="test.json", type=str)
-    parser.add_argument("--save_path", default="", type=str)
+    parser.add_argument("--save_path", default="out", type=str)
     parser.add_argument("--load_path", default="", type=str)
 
     parser.add_argument("--config_name", default="", type=str,
@@ -184,6 +179,20 @@ def main():
 
     args = parser.parse_args()
 
+    if not os.path.exists(args.save_path):
+        os.mkdir(args.save_path)
+    file_name = "{}_{}_{}_{}_isrank_{}_m_{}_e_{}_seed_{}".format(
+        args.train_file.split('.')[0],
+        args.transformer_type,
+        args.data_dir.split('/')[-1],
+        args.m_tag,
+        str(args.isrank),
+        args.m,
+        args.e,
+        str(args.seed))
+    args.save_path = os.path.join(args.save_path, file_name)
+    print(args.save_path)
+
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     args.n_gpu = torch.cuda.device_count()
     args.device = device
@@ -222,8 +231,19 @@ def main():
     print(args.m_tag, args.isrank)
 
     if args.load_path == "":  # Training
-        train(args, model, train_features, dev_features, test_features)
+        train(args, model, train_features, dev_features)
+
+        print("TEST")
+        model = amp.initialize(model, opt_level="O1", verbosity=0)
+        model.load_state_dict(torch.load(args.save_path))
+        test_score, test_output = evaluate(args, model, test_features, tag="test")
+        print(test_output)
+
     else:  # Testing
+        args.load_path = os.path.join(args.load_path, file_name)
+        print(args.load_path)
+        
+        print("TEST")
         model = amp.initialize(model, opt_level="O1", verbosity=0)
         model.load_state_dict(torch.load(args.load_path))
         test_score, test_output = evaluate(args, model, test_features, tag="test")
