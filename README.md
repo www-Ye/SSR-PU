@@ -1,5 +1,5 @@
 # SSR-PU
-Code for EMNLP 2022 Main Conference paper: [A Unified Positive-Unlabeled Learning Framework for Document-Level
+Code for EMNLP 2022 paper: [A Unified Positive-Unlabeled Learning Framework for Document-Level
 Relation Extraction with Different Levels of Labeling].
 
 ## Requirements
