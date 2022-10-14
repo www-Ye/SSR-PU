@@ -1,6 +1,6 @@
 # SSR-PU
 Code for EMNLP 2022 paper: [A Unified Positive-Unlabeled Learning Framework for Document-Level
-Relation Extraction with Different Levels of Labeling].
+Relation Extraction with Different Levels of Labeling]. Our code is modified based on [ATLOP](https://github.com/wzhouad/ATLOP). Here we sincerely thanks for their excellent work.
 
 ## Requirements
 * Python (tested on 3.6.7)
