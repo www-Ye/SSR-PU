@@ -15,10 +15,11 @@ from prepro import read_docred
 from evaluation import official_evaluate, to_official
 
 
-def train(args, model, train_features, dev_features):
+def train(args, model, train_features, dev_features, test_features):
     def finetune(features, optimizer, num_epoch, num_steps):
         best_score = -1
         best_dev_output = None
+        final_test_output = None
         train_dataloader = DataLoader(features, batch_size=args.train_batch_size, shuffle=True, collate_fn=collate_fn, drop_last=True)
         train_iterator = range(int(num_epoch))
         total_steps = int(len(train_dataloader) * num_epoch // args.gradient_accumulation_steps)
@@ -51,17 +52,24 @@ def train(args, model, train_features, dev_features):
                     num_steps += 1
 
                 if (step + 1) == len(train_dataloader) - 1 or (args.evaluation_steps > 0 and num_steps % args.evaluation_steps == 0 and step % args.gradient_accumulation_steps == 0):
+                    print("training risk:", loss.item(), "   step:", num_steps)
+
+                    avg_val_risk = cal_val_risk(args, model, dev_features)
+                    print('avg val risk:', avg_val_risk)
                     dev_score, dev_output = evaluate(args, model, dev_features, tag="dev")
                     print(dev_output)
 
-                    print("loss:", loss.item(), "   step:", num_steps)
+                    test_score, test_output = evaluate(args, model, test_features, tag="test")
+                    print(test_output, '\n')
 
                     if dev_score > best_score:
                         best_score = dev_score
                         best_dev_output = dev_output
+                        final_test_output = test_output
                         torch.save(model.state_dict(), args.save_path)
 
         print('best dev f1:', best_dev_output)
+        print('final test f1:', final_test_output)
         return num_steps
 
     new_layer = ["extractor", "bilinear"]
@@ -77,6 +85,28 @@ def train(args, model, train_features, dev_features):
     model.zero_grad()
     finetune(train_features, optimizer, args.num_train_epochs, num_steps)
 
+def cal_val_risk(args, model, features):
+
+    dataloader = DataLoader(features, batch_size=args.test_batch_size, shuffle=False, collate_fn=collate_fn, drop_last=False)
+    val_risk = 0.
+    nums = 0
+
+    for batch in dataloader:
+        model.eval()
+
+        inputs = {'input_ids': batch[0].to(args.device),
+                  'attention_mask': batch[1].to(args.device),
+                  'labels': batch[2],
+                  'entity_pos': batch[3],
+                  'hts': batch[4],
+                  }
+
+        with torch.no_grad():
+            risk, logits = model(**inputs)
+            val_risk += risk.item()
+            nums += 1
+
+    return val_risk / nums
 
 def evaluate(args, model, features, tag="test"):
 
@@ -231,7 +261,7 @@ def main():
     print(args.m_tag, args.isrank)
 
     if args.load_path == "":  # Training
-        train(args, model, train_features, dev_features)
+        train(args, model, train_features, dev_features, test_features)
 
         print("TEST")
         model = amp.initialize(model, opt_level="O1", verbosity=0)

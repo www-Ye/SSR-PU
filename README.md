@@ -29,10 +29,13 @@ SSR-PU
  |    |    |-- train_distant.json
  |    |    |-- train_ext.json
  |    |    |-- train_revised.json
+ |    |    |-- dev.json
+ |    |    |-- dev_ext.json
  |    |    |-- dev_revised.json
  |    |    |-- test_revised.json
  |    |-- chemdisgene
  |    |    |-- train.json
+ |    |    |-- valid.json
  |    |    |-- test.anno_all.json
  |-- meta
  |    |-- rel2id.json

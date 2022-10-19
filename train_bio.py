@@ -14,7 +14,7 @@ from utils import set_seed, collate_fn
 from prepro import read_chemdisgene
 
 
-def train(args, model, train_features):
+def train(args, model, train_features, dev_features, test_features):
     def finetune(features, optimizer, num_epoch, num_steps):
 
         train_dataloader = DataLoader(features, batch_size=args.train_batch_size, shuffle=True, collate_fn=collate_fn, drop_last=True)
@@ -28,6 +28,7 @@ def train(args, model, train_features):
             model.zero_grad()
             for step, batch in enumerate(tqdm(train_dataloader)):
                 model.train()
+
                 inputs = {'input_ids': batch[0].to(args.device),
                         'attention_mask': batch[1].to(args.device),
                         'labels': batch[2],
@@ -48,8 +49,13 @@ def train(args, model, train_features):
                     num_steps += 1
 
                 if (step + 1) == len(train_dataloader) - 1 or (args.evaluation_steps > 0 and num_steps % args.evaluation_steps == 0 and step % args.gradient_accumulation_steps == 0):
+                    print("training risk:", loss.item(), "   step:", num_steps)
 
-                    print("loss:", loss.item(), "   step:", num_steps)
+                    avg_val_risk = cal_val_risk(args, model, dev_features)
+                    print('avg val risk:', avg_val_risk)
+
+                    test_score, test_output = evaluate(args, model, test_features, tag="test")
+                    print(test_output, '\n')
 
         torch.save(model.state_dict(), args.save_path)
         return num_steps
@@ -67,6 +73,28 @@ def train(args, model, train_features):
     model.zero_grad()
     finetune(train_features, optimizer, args.num_train_epochs, num_steps)
 
+def cal_val_risk(args, model, features):
+
+    dataloader = DataLoader(features, batch_size=args.test_batch_size, shuffle=False, collate_fn=collate_fn, drop_last=False)
+    val_risk = 0.
+    nums = 0
+
+    for batch in dataloader:
+        model.eval()
+
+        inputs = {'input_ids': batch[0].to(args.device),
+                  'attention_mask': batch[1].to(args.device),
+                  'labels': batch[2],
+                  'entity_pos': batch[3],
+                  'hts': batch[4],
+                  }
+
+        with torch.no_grad():
+            risk, logits = model(**inputs)
+            val_risk += risk.item()
+            nums += 1
+
+    return val_risk / nums
 
 def evaluate(args, model, features, tag="test"):
 
@@ -98,14 +126,10 @@ def evaluate(args, model, features, tag="test"):
                 pred[:, 0] = (pred.sum(1) == 0)
 
             preds.append(pred)
-            t = []
-            for label in batch[2]:
-                if len(label) > 0:
-                    t.append(np.array(label, np.float32))
-            golds.append(np.concatenate(t, axis=0))
+            labels = [np.array(label, np.float32) for label in batch[2]]
+            golds.append(np.concatenate(labels, axis=0))
 
     preds = np.concatenate(preds, axis=0).astype(np.float32)
-
     preds = preds[:,1:]
     golds = np.concatenate(golds, axis=0).astype(np.float32)[:,1:]
 
@@ -210,8 +234,10 @@ def main():
     read = read_chemdisgene
 
     train_file = os.path.join(args.data_dir, args.train_file)
+    dev_file = os.path.join(args.data_dir, args.dev_file)
     test_file = os.path.join(args.data_dir, args.test_file)
     train_features, priors = read(args, train_file, tokenizer, max_seq_length=args.max_seq_length)
+    dev_features, _ = read(args, dev_file, tokenizer, max_seq_length=args.max_seq_length)
     test_features, _ = read(args, test_file, tokenizer, max_seq_length=args.max_seq_length)
 
     model = AutoModel.from_pretrained(
@@ -231,7 +257,7 @@ def main():
     print(args.m_tag, args.isrank)
 
     if args.load_path == "":  # Training
-        train(args, model, train_features)
+        train(args, model, train_features, dev_features, test_features)
 
         print("TEST")
         model = amp.initialize(model, opt_level="O1", verbosity=0)

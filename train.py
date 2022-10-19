@@ -15,7 +15,7 @@ from prepro import read_docred
 from evaluation import official_evaluate, to_official
 
 
-def train(args, model, train_features, dev_features):
+def train(args, model, train_features, dev_features, test_features):
     def finetune(features, optimizer, num_epoch, num_steps):
 
         train_dataloader = DataLoader(features, batch_size=args.train_batch_size, shuffle=True, collate_fn=collate_fn, drop_last=True)
@@ -29,6 +29,7 @@ def train(args, model, train_features, dev_features):
             model.zero_grad()
             for step, batch in enumerate(tqdm(train_dataloader)):
                 model.train()
+
                 inputs = {'input_ids': batch[0].to(args.device),
                         'attention_mask': batch[1].to(args.device),
                         'labels': batch[2],
@@ -49,10 +50,13 @@ def train(args, model, train_features, dev_features):
                     num_steps += 1
 
                 if (step + 1) == len(train_dataloader) - 1 or (args.evaluation_steps > 0 and num_steps % args.evaluation_steps == 0 and step % args.gradient_accumulation_steps == 0):
-                    dev_score, dev_output = evaluate(args, model, dev_features, tag="dev")
-                    print(dev_output)
+                    print("training risk:", loss.item(), "   step:", num_steps)
+                    
+                    avg_val_risk = cal_val_risk(args, model, dev_features)
+                    print('avg val risk:', avg_val_risk)
 
-                    print("loss:", loss.item(), "   step:", num_steps)
+                    test_score, test_output = evaluate(args, model, test_features, tag="test")
+                    print(test_output, '\n')
 
         torch.save(model.state_dict(), args.save_path)
         return num_steps
@@ -70,6 +74,28 @@ def train(args, model, train_features, dev_features):
     model.zero_grad()
     finetune(train_features, optimizer, args.num_train_epochs, num_steps)
 
+def cal_val_risk(args, model, features):
+
+    dataloader = DataLoader(features, batch_size=args.test_batch_size, shuffle=False, collate_fn=collate_fn, drop_last=False)
+    val_risk = 0.
+    nums = 0
+
+    for batch in dataloader:
+        model.eval()
+
+        inputs = {'input_ids': batch[0].to(args.device),
+                  'attention_mask': batch[1].to(args.device),
+                  'labels': batch[2],
+                  'entity_pos': batch[3],
+                  'hts': batch[4],
+                  }
+
+        with torch.no_grad():
+            risk, logits = model(**inputs)
+            val_risk += risk.item()
+            nums += 1
+
+    return val_risk / nums
 
 def evaluate(args, model, features, tag="test"):
 
@@ -90,7 +116,6 @@ def evaluate(args, model, features, tag="test"):
 
             if args.isrank:
                 pred = np.zeros((logits.shape[0], logits.shape[1]))
-                # print(logits)
                 for i in range(1, logits.shape[1]):
                     pred[(logits[:, i] > logits[:, 0]), i] = 1
                 pred[:, 0] = (pred.sum(1) == 0)
@@ -225,7 +250,7 @@ def main():
     print(args.m_tag, args.isrank)
 
     if args.load_path == "":  # Training
-        train(args, model, train_features, dev_features)
+        train(args, model, train_features, dev_features, test_features)
 
         print("TEST")
         model = amp.initialize(model, opt_level="O1", verbosity=0)
