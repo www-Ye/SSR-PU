@@ -15,11 +15,10 @@ from prepro import read_docred
 from evaluation import official_evaluate, to_official
 
 
-def train(args, model, train_features, dev_features, test_features):
+def train(args, model, train_features, dev_features):
     def finetune(features, optimizer, num_epoch, num_steps):
         best_score = -1
         best_dev_output = None
-        final_test_output = None
         train_dataloader = DataLoader(features, batch_size=args.train_batch_size, shuffle=True, collate_fn=collate_fn, drop_last=True)
         train_iterator = range(int(num_epoch))
         total_steps = int(len(train_dataloader) * num_epoch // args.gradient_accumulation_steps)
@@ -57,19 +56,14 @@ def train(args, model, train_features, dev_features, test_features):
                     avg_val_risk = cal_val_risk(args, model, dev_features)
                     print('avg val risk:', avg_val_risk)
                     dev_score, dev_output = evaluate(args, model, dev_features, tag="dev")
-                    print(dev_output)
-
-                    test_score, test_output = evaluate(args, model, test_features, tag="test")
-                    print(test_output, '\n')
+                    print(dev_output, '\n')
 
                     if dev_score > best_score:
                         best_score = dev_score
                         best_dev_output = dev_output
-                        final_test_output = test_output
                         torch.save(model.state_dict(), args.save_path)
 
         print('best dev f1:', best_dev_output)
-        print('final test f1:', final_test_output)
         return num_steps
 
     new_layer = ["extractor", "bilinear"]
@@ -261,7 +255,7 @@ def main():
     print(args.m_tag, args.isrank)
 
     if args.load_path == "":  # Training
-        train(args, model, train_features, dev_features, test_features)
+        train(args, model, train_features, dev_features)
 
         print("TEST")
         model = amp.initialize(model, opt_level="O1", verbosity=0)

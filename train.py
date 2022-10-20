@@ -15,7 +15,7 @@ from prepro import read_docred
 from evaluation import official_evaluate, to_official
 
 
-def train(args, model, train_features, dev_features, test_features):
+def train(args, model, train_features, dev_features):
     def finetune(features, optimizer, num_epoch, num_steps):
 
         train_dataloader = DataLoader(features, batch_size=args.train_batch_size, shuffle=True, collate_fn=collate_fn, drop_last=True)
@@ -53,10 +53,7 @@ def train(args, model, train_features, dev_features, test_features):
                     print("training risk:", loss.item(), "   step:", num_steps)
                     
                     avg_val_risk = cal_val_risk(args, model, dev_features)
-                    print('avg val risk:', avg_val_risk)
-
-                    test_score, test_output = evaluate(args, model, test_features, tag="test")
-                    print(test_output, '\n')
+                    print('avg val risk:', avg_val_risk, '\n')
 
         torch.save(model.state_dict(), args.save_path)
         return num_steps
@@ -250,7 +247,7 @@ def main():
     print(args.m_tag, args.isrank)
 
     if args.load_path == "":  # Training
-        train(args, model, train_features, dev_features, test_features)
+        train(args, model, train_features, dev_features)
 
         print("TEST")
         model = amp.initialize(model, opt_level="O1", verbosity=0)
