@@ -64,4 +64,5 @@ Train ChemDisGene model with the following command:
 >> sh scripts/run_bio_rank.sh  # SSR-PU PubmedBERT
 ```
 
+### Download model parameters
 Our model parameters can be downloaded from the [link](https://huggingface.co/wwwyyy/SSR-PU_DocRE/tree/main).
