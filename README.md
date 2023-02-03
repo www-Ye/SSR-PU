@@ -65,4 +65,4 @@ Train ChemDisGene model with the following command:
 ```
 
 ### Download Model Parameters
-Our model parameters can be downloaded from the [link](https://huggingface.co/wwwyyy/SSR-PU_DocRE/tree/main).
+Our model parameters can be downloaded from https://huggingface.co/wwwyyy/SSR-PU_DocRE/tree/main.
